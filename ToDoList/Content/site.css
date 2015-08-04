@@ -1,0 +1,25 @@
+﻿  .hidden {
+            visibility: hidden;
+        }
+        .cross-out-text {
+            text-decoration: line-through;
+        } 
+        body {
+            margin: 10px 0; 
+        }
+
+    .layout {
+        width: 978px; 
+        margin: auto; 
+        border: 1px solid #00f; 
+    }
+
+    .wrap {
+        padding: 20px 20px 70px;
+    }
+
+    .content {
+        min-height: 590px; 
+        padding-left: 500px; 
+    }
+

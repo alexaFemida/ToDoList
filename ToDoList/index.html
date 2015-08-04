@@ -1,0 +1,252 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>ToDo's</title>
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" href="Content/site.css" />
+</head>
+<body>
+    <div class="layout">
+    <div class="wrap">
+        <div>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <span class="input-group-addon">
+                            <input id="checkUncheckAll" type="checkbox" aria-label="...">
+                        </span>
+                        <input id="newToDo" type="text" class="form-control" placeholder="What needs to be done?">
+                    </div>
+                </div>
+            </div>
+                </div>
+                <div>
+                    <h2>ToDo's</h2>
+                    <ul id="todos" class="list-group"></ul>
+                </div>
+
+                <div class="btn-group" role="group" aria-label="...">
+                    <input type="button" id="getAllTodos" value="All" onclick="getAllToDos();" class="btn btn-default" />
+                    <input type="button" id="getActiveTodos" value="Active" onclick="findToDosByState(this.value);" class="btn btn-default" />
+                    <input type="button" value="Completed" onclick="findToDosByState(this.value);" class="btn btn-default" />
+                    <input type="button" id="clearCompleted" class="hidden" value="Clear Completed" onclick="clearCompleted();" />
+                    <p id="todo" />
+                </div>
+
+            </div>
+        </div>
+           
+            <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.0.3.min.js"></script>
+            <script>
+
+                function createDynamicItem(item) {
+                    var li = $('<li>', { text: formatItem(item) }).appendTo($('#todos'));
+                    li.addClass("list-group-item");
+                    var ctrl = $('<input/>').attr({ type: 'checkbox', id: item.Id, statusName: item.StatusId, checked: isChecked(item) }).addClass("chk");
+                    ctrl.appendTo(li);
+                    var del = $('<input/>').attr({ type: 'button', id: item.Id, value: "Cancel", action : "Cancel" }).addClass("btn btn-danger");
+             
+                    del.appendTo(li);
+                    $('#todos input:checkbox').each(function () {
+                        if ($(this).is(':checked'))
+                            $(this).parent().addClass("list-group-item-success cross-out-text");
+                    });
+                };
+
+                $(document).ready(function () {
+                    getAllToDos();
+                  
+             
+                    $('#newToDo').on('keypress', function(event) {
+                        if (event.which === 13) {
+                            addToDo();
+                         
+                        }
+                    });
+                });
+                $(document).on('change', '#checkUncheckAll', function () {
+                    var changeStatusForAll = function (data) {
+                     
+                        $.get("api/todos/ChangeStatusForAll",
+                      {
+                          newStatusId: data
+                      } 
+                  );
+                        if ( data == 2) {
+                            $('#checkUncheckAll').val('Complited');
+                            
+                            $('#todos input:checkbox').each(function () {
+                                $(this).prop('checked', true);
+                                $(this).parent().addClass("list-group-item-success cross-out-text");
+                            });
+                        } else {
+                            $('#checkUncheckAll').val('Active');
+                            $('#todos input:checkbox').each(function () {
+                                $(this).prop('checked', false);
+                                $(this).parent().removeClass("list-group-item-success cross-out-text");
+                                $(this).parent().addClass("list-group-item");
+                            });
+                        }
+                    };
+                    changeStatusForAll($(this).val() === "Active" ? 2 : 1);                
+                });
+
+                $(document).on('change', '#todos [type=checkbox]', function () {
+                    debugger;
+                    
+                    var todo = {
+                        itemId: this.id,
+                    };
+
+                    if (!$(this).is(':checked')) {
+                        $(this).parent().removeClass("list-group-item-success cross-out-text").addClass("list-group-item ");
+                        todo.statusId = 2;
+                    }
+                    else {
+                        $(this).parent().addClass("list-group-item-success cross-out-text");
+                        todo.statusId = 1;
+                    }
+                    var completedTodos = $('[type="checkbox"]:checked').length;
+                    if (completedTodos > 0) {
+                       $('#clearCompleted').removeClass('hidden').addClass('btn btn-default');
+                    } else {
+                        $('#clearCompleted').removeClass('btn btn-default').addClass('hidden');
+                    }
+                   
+                    $.ajax(
+                    {
+                        url: "api/todos/ChangeStatus",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ itemId : todo.itemId, statusId : todo.statusId }),
+                        success: function (result) {
+                            alert(result);
+                        }
+                    });
+                });
+
+                $(document).on('click', '[action="Cancel"]', function (e) {
+                    var uri = 'api/todos/Delete';
+                    $.get(uri + '/' + this.id)
+                        .done(function (data) {
+                            $('#todos').empty();
+                            $.each(data,
+                                function (key, item) {
+                                    createDynamicItem(item);
+                                }
+                            );
+                        })
+                        .fail(function (jqXHR, textStatus, err) {
+                            $('#todos').text('Error: ' + err);
+                        });
+
+                    var completedTodos = $('[type="checkbox"]:checked').length;
+                    if (completedTodos < 2)
+                        $('#clearCompleted').removeClass('btn btn-default').addClass('hidden');
+                });
+
+                function getAllToDos() {
+                    debugger;
+                    var uri = 'api/todos/GetAllTodos';
+                    $.getJSON(uri)
+
+                        .done(function (data) {
+                            $('#todos').empty();
+                            $.each(data,
+                                function (key, item) {
+                                    createDynamicItem(item);
+                                });
+                            var test = $('[type="checkbox"]:checked').length;
+                        debugger;
+                        if (test > 0) {
+                            $('#clearCompleted').removeClass('hidden').addClass('btn btn-default');
+                           
+                        } else {
+                            $("#checkUncheckAll").attr('value', 'Active');
+                        }
+                        $('#todos input:checkbox').each(function () {
+                                if ($(this).is(':checked')) {
+                                    $(this).parent().addClass("list-group-item-success cross-out-text");
+                                    $(this).attr('checked', true);
+                                }
+                            });
+               
+                        });
+                }
+                function addToDo() {
+                    var itemFound = false;
+                    var todo = { Name: $('#newToDo').val(), StatusId: "1", StatusName: "Active" };
+                    $.ajax({
+                        type: "POST",
+                        data: JSON.stringify(todo),
+                        url: "api/todos/Post",
+                        contentType: "application/json",
+
+                        success: function (data) {
+                            $('#todos li').each(function () {
+                                if ($(this).text() === $('#newToDo').val()) {
+                                    itemFound = true;
+                                }
+                            });
+                            if (!itemFound) {
+                                if (!itemFound) {
+                                    var li = $('<li>', { text: $('#newToDo').val() }).appendTo($('#todos'));
+                                    var ctrl = $('<input/>').attr({ type: 'checkbox', id: data, statusName: todo.StatusId }).addClass("chk");
+                                    ctrl.appendTo(li);
+                                    li.addClass("list-group-item");
+                                    var del = $('<input/>').attr({ type: 'button', id: data, value: "Cancel", action : "Cancel"  }).addClass("btn btn-danger");
+  
+                                    del.appendTo(li);
+                                    debugger;
+                                    $('#newToDo').val("");
+                                }
+                            }
+                         
+                        }
+                    });
+
+                }
+                function formatItem(item) {
+                    var st = item.Name;
+                    return st;
+                }
+
+                function isChecked(item) {
+                    if (item.StatusId == 2)
+                        return true;
+                    else {
+                        return false;
+                    }
+                }
+                function findToDosByState(id) {
+                    var uri = 'api/todos/ToDosByStatusName';
+                    debugger;
+                    $.getJSON(uri + '/' + id)
+                        .done(function (data) {
+                            $('#todos').empty();
+                            $.each(data, function (key, item) {
+                                createDynamicItem(item);
+                            });
+                        })
+                        .fail(function (jqXHR, textStatus, err) {
+                            $('#todos').text('Error: ' + err);
+                        });
+                }
+
+                function clearCompleted() {
+                    var uri = 'api/todos/ClearCompleted';
+                    $.get(uri)
+                        .done(function (data) {
+                            $('#todos').empty();
+                            $.each(data, function (key, item) {
+                                createDynamicItem(item);
+                                $('#clearCompleted').removeClass('btn btn-default').addClass('hidden');
+                            });
+                        })
+                        .fail(function (jqXHR, textStatus, err) {
+                            $('#todos').text('Error: ' + err);
+                        });
+                }
+            </script>
+</body>
+</html>
